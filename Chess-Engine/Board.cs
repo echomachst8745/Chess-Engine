@@ -55,6 +55,9 @@ namespace Chess_Engine
                 rank++;
             }
 
+            // TODO: ADD Functionality for other FEN parts
+            throw new NotImplementedException();
+
             return board;
         }
 
