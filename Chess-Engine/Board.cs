@@ -1,131 +1,213 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Chess_Engine
 {
-    internal class Board
+    public class Board
     {
+        // FEN string for the starting position.
         public const string DefaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-        Piece[] pieceArray = new Piece[64];
+        private byte[] squares;
+
+        private bool isWhiteMove;
+
+        /// <summary>
+        /// A byte that stores the castle rights of both sides.
+        /// For example, 0b00001111 means both colours can castle on both sides.
+        /// 
+        /// Represents:
+        /// 0b0000<White King Side><White Queen Side><Black King Side><Black Queen Side>.
+        /// </summary>
+        private byte castleRightBits;
+
+        // The index of the square that a pawn can move to for en passant.
+        private int enPassantTargetIndex;
+
+        // Half moves since a pawn advance or piece capture.
+        private int halfMoves;
+        // Full moves since the start.
+        private int fullMoves;
 
         public Board(string fenString = DefaultFEN)
         {
-            pieceArray = BoardFromFENString(fenString);
-        }
-
-        private Piece[] BoardFromFENString(string fenString)
-        {
-            Piece[] board = Enumerable.Repeat(new Piece(), 64).ToArray();
-
-            // Validate FEN string
-            if (!Regex.IsMatch(fenString, @"^([pnbrqkPNBRQK1-8]+/){7}[pnbrqkPNBRQK1-8]+ [wb] K?Q?k?q? (([a-h][36])|-) \d \d$"))
-            {
-                throw new ArgumentException($"{nameof(fenString)} was not a valid FEN string.");
-            }
-
             string[] fenStringParts = fenString.Split();
 
-            // Place pieces
-            int file = 0;
-            int rank = 0;
-            
-            foreach (string fenRank in fenStringParts[0].Split('/'))
-            {
-                foreach (char rankElement in fenRank)
-                {
-                    bool elementIsNumber = char.IsDigit(rankElement);
+            // Setup squares
+            squares = SquaresFromFEN(fenStringParts[0]);
 
+            // Set current move colour
+            isWhiteMove = fenStringParts[1] == "w";
+
+            // Set castling rights
+            castleRightBits = CastlingRightsFromFEN(fenStringParts[2]);
+
+            // Set en passant target
+            enPassantTargetIndex = fenStringParts[3] != "-" ? FileRankStringToIndex(fenStringParts[3]) : -1;
+
+            // Set move counters
+            halfMoves = Convert.ToInt32(fenStringParts[4]);
+            fullMoves = Convert.ToInt32(fenStringParts[5]);
+        }
+
+        private int FileRankStringToIndex(string fileRankString)
+        {
+            int file = (int)fileRankString[0] - (int)'a';
+            int rank = (int)char.GetNumericValue(fileRankString[1]) - 1;
+
+            return IndexFromFileRank(file, rank);
+        }
+
+        private byte[] SquaresFromFEN(string fenSquares)
+        {
+            byte[] squares = new byte[64];
+
+            int currentIndex = 0;
+
+            foreach (string rank in fenSquares.Split('/').Reverse())
+            {
+                foreach (char rankElement in rank)
+                {
                     if (char.IsDigit(rankElement))
                     {
-                        file += (int)char.GetNumericValue(rankElement);
+                        currentIndex += (int)char.GetNumericValue(rankElement);
                     }
                     else
                     {
-                        board[FileRankToIndex(file, rank)] = new Piece(rankElement);
-                        file++;
+                        squares[currentIndex++] = Piece.SymbolToPiece(rankElement);
                     }
                 }
-
-                file = 0;
-                rank++;
             }
 
-            // TODO: ADD Functionality for other FEN parts
-            throw new NotImplementedException();
-
-            return board;
+            return squares;
         }
 
-        private int FileRankToIndex(int file, int rank)
+        private byte CastlingRightsFromFEN(string castlingFEN)
         {
-            if (file < 0 || file > 7 || rank < 0 || rank > 7)
+            byte castlingRights = 0b0000;
+
+            castlingRights |= (byte)(castlingFEN.Contains("K") ? 0b1000 : 0b0000);
+            castlingRights |= (byte)(castlingFEN.Contains("Q") ? 0b0100 : 0b0000);
+            castlingRights |= (byte)(castlingFEN.Contains("k") ? 0b0010 : 0b0000);
+            castlingRights |= (byte)(castlingFEN.Contains("q") ? 0b0001 : 0b0000);
+
+            return castlingRights;
+        }
+
+        private int IndexFromFileRank(int file, int rank)
+        {
+            return rank * 8 + file;
+        }
+
+        public override string ToString()
+        {
+            string boardString = string.Empty;
+
+            for (int rank = 7; rank >= 0; rank--)
             {
-                throw new ArgumentException($"{nameof(file)} or {nameof(rank)} was invalid.");
+                for (int file = 0; file <= 7; file++)
+                {
+                    boardString += Piece.PieceToSymbol(squares[IndexFromFileRank(file, rank)]);
+                }
+                boardString += '\n';
             }
 
-            return rank * 8 + file;
+            return boardString;
         }
     }
 
-    internal class Piece
+    public static class Piece
     {
-        private const int NullValue   = (0b0 << 0);
+        public const byte NoneValue   = 0b00000000;
+        public const byte PawnValue   = 0b00000001;
+        public const byte KnightValue = 0b00000010;
+        public const byte BishopValue = 0b00000100;
+        public const byte RookValue   = 0b00001000;
+        public const byte QueenValue  = 0b00010000;
+        public const byte KingValue   = 0b00100000;
 
-        // Values for piece types, e.g. Pawn = 0b00000001
-        private const int PawnValue   = (0b1 << 0);
-        private const int KnightValue = (0b1 << 1);
-        private const int BishopValue = (0b1 << 2);
-        private const int RookValue   = (0b1 << 3);
-        private const int QueenValue  = (0b1 << 4);
-        private const int KingValue   = (0b1 << 5);
+        public const byte WhiteValue  = 0b01000000;
+        public const byte BlackValue  = 0b10000000;
 
-        // Values for piece colours, e.g. White = 0b01000000
-        private const int WhiteValue  = (0b1 << 6);
-        private const int BlackValue  = (0b1 << 7);
-
-        public int Type { get; } = NullValue;
-        public int Colour { get; } = NullValue;
-
-        public bool IsWhite => (Colour & WhiteValue) == WhiteValue;
-        public bool IsNull => (Type & 0b11111111) == NullValue;
-
-        public Piece()
+        public static bool IsWhite(byte piece)
         {
-
+            return (piece & WhiteValue) == WhiteValue;
         }
 
-        public Piece(char pieceSymbol)
+        public static byte GetType(byte piece)
         {
-            switch (char.ToLower(pieceSymbol))
+            return (byte)(piece & 0b00111111);
+        }
+
+        public static char PieceToSymbol(byte piece)
+        {
+            char symbol;
+
+            switch (Piece.GetType(piece))
             {
-                case 'p':
-                    Type = PawnValue;
+                case NoneValue:
+                    return '.';
+                case PawnValue:
+                    symbol = 'P';
                     break;
-                case 'n':
-                    Type = KnightValue;
+                case KnightValue:
+                    symbol = 'N';
                     break;
-                case 'b':
-                    Type = BishopValue;
+                case BishopValue:
+                    symbol = 'B';
                     break;
-                case 'r':
-                    Type = RookValue;
+                case RookValue:
+                    symbol = 'R';
                     break;
-                case 'q':
-                    Type = QueenValue;
+                case QueenValue:
+                    symbol = 'Q';
                     break;
-                case 'k':
-                    Type = KingValue;
+                case KingValue:
+                    symbol = 'K';
                     break;
                 default:
-                    throw new ArgumentException($"{nameof(pieceSymbol)} was not a valid piece symbol.");
+                    throw new ArgumentException($"{nameof(piece)} was not a valid piece.");
             }
 
-            Colour = char.IsLower(pieceSymbol) ? BlackValue : WhiteValue;
+            return Piece.IsWhite(piece) ? char.ToUpper(symbol) : char.ToLower(symbol);
+        }
+
+        public static byte SymbolToPiece(char symbol)
+        {
+            byte piece = NoneValue;
+
+            switch (char.ToUpper(symbol))
+            {
+                case 'P':
+                    piece |= PawnValue;
+                    break;
+                case 'N':
+                    piece |= KnightValue;
+                    break;
+                case 'B':
+                    piece |= BishopValue;
+                    break;
+                case 'R':
+                    piece |= RookValue;
+                    break;
+                case 'Q':
+                    piece |= QueenValue;
+                    break;
+                case 'K':
+                    piece |= KingValue;
+                    break;
+                default:
+                    throw new ArgumentException($"{nameof(symbol)} was not a valid piece symbol.");
+            }
+
+            piece |= char.IsUpper(symbol) ? WhiteValue : BlackValue;
+
+            return piece;
         }
     }
 }
