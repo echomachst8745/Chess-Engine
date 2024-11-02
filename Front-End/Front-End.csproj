@@ -9,4 +9,40 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Images\bb.png" />
+    <None Remove="Images\bk.png" />
+    <None Remove="Images\bn.png" />
+    <None Remove="Images\board-squares.png" />
+    <None Remove="Images\bp.png" />
+    <None Remove="Images\bq.png" />
+    <None Remove="Images\br.png" />
+    <None Remove="Images\wb.png" />
+    <None Remove="Images\wk.png" />
+    <None Remove="Images\wn.png" />
+    <None Remove="Images\wp.png" />
+    <None Remove="Images\wq.png" />
+    <None Remove="Images\wr.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Chess-Engine\Chess-Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\bb.png" />
+    <Resource Include="Images\bk.png" />
+    <Resource Include="Images\bn.png" />
+    <Resource Include="Images\board-squares.png" />
+    <Resource Include="Images\bp.png" />
+    <Resource Include="Images\bq.png" />
+    <Resource Include="Images\br.png" />
+    <Resource Include="Images\wb.png" />
+    <Resource Include="Images\wk.png" />
+    <Resource Include="Images\wn.png" />
+    <Resource Include="Images\wp.png" />
+    <Resource Include="Images\wq.png" />
+    <Resource Include="Images\wr.png" />
+  </ItemGroup>
+
 </Project>
