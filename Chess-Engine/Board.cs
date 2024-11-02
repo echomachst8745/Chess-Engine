@@ -13,7 +13,8 @@ namespace Chess_Engine
         // FEN string for the starting position.
         public const string DefaultFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-        private byte[] squares;
+        public byte[] Squares { get { return _squares; } }
+        private byte[] _squares;
 
         private bool isWhiteMove;
 
@@ -39,7 +40,7 @@ namespace Chess_Engine
             string[] fenStringParts = fenString.Split();
 
             // Setup squares
-            squares = SquaresFromFEN(fenStringParts[0]);
+            _squares = SquaresFromFEN(fenStringParts[0]);
 
             // Set current move colour
             isWhiteMove = fenStringParts[1] == "w";
@@ -53,6 +54,12 @@ namespace Chess_Engine
             // Set move counters
             halfMoves = Convert.ToInt32(fenStringParts[4]);
             fullMoves = Convert.ToInt32(fenStringParts[5]);
+        }
+
+        public void MakeMove(Move move)
+        {
+            _squares[move.endSquareIndex] = _squares[move.startSquareIndex];
+            _squares[move.startSquareIndex] = Piece.NoneValue;
         }
 
         private int FileRankStringToIndex(string fileRankString)
@@ -99,7 +106,7 @@ namespace Chess_Engine
             return castlingRights;
         }
 
-        private int IndexFromFileRank(int file, int rank)
+        public static int IndexFromFileRank(int file, int rank)
         {
             return rank * 8 + file;
         }
@@ -112,7 +119,7 @@ namespace Chess_Engine
             {
                 for (int file = 0; file <= 7; file++)
                 {
-                    boardString += Piece.PieceToSymbol(squares[IndexFromFileRank(file, rank)]);
+                    boardString += Piece.PieceToSymbol(_squares[IndexFromFileRank(file, rank)]);
                 }
                 boardString += '\n';
             }
