@@ -68,6 +68,7 @@ namespace Front_End
 
             if (selectedPieceImage != null)
             {
+                Panel.SetZIndex(selectedPieceImage, int.MaxValue);
                 isDraggingPiece = true;
                 selectedPieceImage.CaptureMouse();
                 selectedPieceInitalPosition = e.GetPosition(PieceGrid);
